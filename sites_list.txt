@@ -1,0 +1,5 @@
+Pressure sensor supplier:
+http://www.digikey.co.uk/product-detail/en/MS5541-CM/223-1099-1-ND/1991411
+
+Nitrile O-rings:
+http://www.polymax.co.uk/o-rings/rubber-nbr-oring/3mm-cross-section-nitrile
