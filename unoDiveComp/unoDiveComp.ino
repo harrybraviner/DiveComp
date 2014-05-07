@@ -37,71 +37,32 @@
 // Use hardware SPI
 Adafruit_ILI9340 tft = Adafruit_ILI9340(_cs, _dc, _rst);
 
+// Dive variables
+float depth;
+float dive_time;
+
 void setup() {
   Serial.begin(9600);
   while (!Serial);
   
   Serial.println("Adafruit 2.2\" SPI TFT Test!"); 
  
+  // Setup the display
   tft.begin();
+  tft.setRotation(1);  // Want a landscape display
 
-  Serial.println(F("Benchmark                Time (microseconds)"));
-  Serial.print(F("Screen fill              "));
-  Serial.println(testFillScreen());
-  delay(500);
+  // Initialise dive variables
+  depth = 99.0;
+  dive_time = 0.0;
 
   Serial.print(F("Text                     "));
-  Serial.println(testText());
-  delay(3000);
-
-  Serial.print(F("Lines                    "));
-  Serial.println(testLines(ILI9340_CYAN));
+  drawDiveDisplay();
   delay(500);
-
-  Serial.print(F("Horiz/Vert Lines         "));
-  Serial.println(testFastLines(ILI9340_RED, ILI9340_BLUE));
-  delay(500);
-
-  Serial.print(F("Rectangles (outline)     "));
-  Serial.println(testRects(ILI9340_GREEN));
-  delay(500);
-
-  Serial.print(F("Rectangles (filled)      "));
-  Serial.println(testFilledRects(ILI9340_YELLOW, ILI9340_MAGENTA));
-  delay(500);
-
-  Serial.print(F("Circles (filled)         "));
-  Serial.println(testFilledCircles(10, ILI9340_MAGENTA));
-
-  Serial.print(F("Circles (outline)        "));
-  Serial.println(testCircles(10, ILI9340_WHITE));
-  delay(500);
-
-  Serial.print(F("Triangles (outline)      "));
-  Serial.println(testTriangles());
-  delay(500);
-
-  Serial.print(F("Triangles (filled)       "));
-  Serial.println(testFilledTriangles());
-  delay(500);
-
-  Serial.print(F("Rounded rects (outline)  "));
-  Serial.println(testRoundRects());
-  delay(500);
-
-  Serial.print(F("Rounded rects (filled)   "));
-  Serial.println(testFilledRoundRects());
-  delay(500);
-
-  Serial.println(F("Done!"));
 }
 
 void loop(void) {
-  for(uint8_t rotation=0; rotation<4; rotation++) {
-    tft.setRotation(rotation);
-    testText();
+    drawDiveDisplay();
     delay(2000);
-  }
 }
 
 
@@ -113,6 +74,54 @@ unsigned long testFillScreen() {
   tft.fillScreen(ILI9340_BLUE);
   tft.fillScreen(ILI9340_BLACK);
   return micros() - start;
+}
+
+void drawDiveDisplay() {
+  tft.fillScreen(ILI9340_BLACK);
+  
+  // Display dive time
+  tft.setCursor(0, 0);
+  tft.setTextColor(ILI9340_WHITE);  tft.setTextSize(3);
+  tft.print("Dive time: ");
+  tft.println(dive_time);
+  
+  // Display depth in meters
+  tft.setCursor(0, 40);
+  tft.setTextColor(ILI9340_WHITE);  tft.setTextSize(3);
+  char s1[5]; char s2[2];
+  sprintf(s1, "%d", floor(depth));
+  sprintf(s2, "%1d", (unsigned int)(max(depth, 0)), ((unsigned int)(max(depth*10, 0))%10));
+  tft.println("Depth: ");
+  Serial.println("-----");
+  Serial.println(s1);
+  Serial.println(s2);
+  tft.setCursor(50, 40); tft.setTextSize(7); tft.print(s1);
+  tft.setCursor(180, 40); tft.print(".");
+  tft.setCursor(150, 40); tft.print(s1);
+  tft.setCursor(240,68);
+  tft.setTextSize(3);
+  tft.print(" msw");
+  
+  /*
+  tft.setTextColor(ILI9340_YELLOW); tft.setTextSize(2);
+  tft.println(1234.56);
+  tft.setTextColor(ILI9340_RED);    tft.setTextSize(3);
+  tft.println(0xDEADBEEF, HEX);
+  tft.println();
+  tft.setTextColor(ILI9340_GREEN);
+  tft.setTextSize(5);
+  tft.println("Groop");
+  tft.setTextSize(2);
+  tft.println("I implore thee,");
+  tft.setTextSize(1);
+  tft.println("my foonting turlingdromes.");
+  tft.println("And hooptiously drangle me");
+  tft.println("with crinkly bindlewurdles,");
+  tft.println("Or I will rend thee");
+  tft.println("in the gobberwarts");
+  tft.println("with my blurglecruncheon,");
+  tft.println("see if I don't!");
+  */
 }
 
 unsigned long testText() {
