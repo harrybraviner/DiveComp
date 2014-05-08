@@ -17,6 +17,7 @@
 #include "SPI.h"
 #include "Adafruit_GFX.h"
 #include "Adafruit_ILI9340.h"
+#include "Time.h"
 
 #if defined(__SAM3X8E__)
     #undef __FlashStringHelper::F(string_literal)
@@ -43,6 +44,8 @@ float dive_time;
 
 // Display variables
 char s1[4], s2[2];
+unsigned int prev_display_depth_dm;
+time_t current_time;
 
 void setup() {
   Serial.begin(9600);
@@ -57,6 +60,9 @@ void setup() {
   // Initialise dive variables
   depth_dm = 1995;
   dive_time = 0.0;
+  
+  // Initialise the time to about now-ish
+  setTime(17, 57, 0, 8, 05, 2014);
 
   Serial.print(F("Text                     "));
   drawDiveDisplay();
@@ -64,9 +70,10 @@ void setup() {
 }
 
 void loop(void) {
-    if(depth_dm == 5) depth_dm = 4995;
+    /*if(depth_dm == 5) depth_dm = 4995;
     else depth_dm = 5;
-    drawDiveDisplay();
+    drawDiveDisplay();*/
+    drawSurfaceDisplay();
     delay(500);
 }
 
@@ -93,8 +100,6 @@ void drawDiveDisplay() {
   // Display depth in meters
   tft.setCursor(0, 40);
   tft.setTextColor(ILI9340_WHITE);  
-
-  
   tft.setCursor(0, 40); tft.setTextSize(3); tft.println("Depth: ");
   Serial.println("-----");
   Serial.println(s1);
@@ -130,26 +135,32 @@ void drawDiveDisplay() {
     tft.setCursor(240,68); tft.setTextSize(3); tft.print(" msw");
   }
   
-  /*
-  tft.setTextColor(ILI9340_YELLOW); tft.setTextSize(2);
-  tft.println(1234.56);
-  tft.setTextColor(ILI9340_RED);    tft.setTextSize(3);
-  tft.println(0xDEADBEEF, HEX);
-  tft.println();
-  tft.setTextColor(ILI9340_GREEN);
-  tft.setTextSize(5);
-  tft.println("Groop");
-  tft.setTextSize(2);
-  tft.println("I implore thee,");
-  tft.setTextSize(1);
-  tft.println("my foonting turlingdromes.");
-  tft.println("And hooptiously drangle me");
-  tft.println("with crinkly bindlewurdles,");
-  tft.println("Or I will rend thee");
-  tft.println("in the gobberwarts");
-  tft.println("with my blurglecruncheon,");
-  tft.println("see if I don't!");
-  */
+  // Update display variables
+  prev_display_depth_dm = depth_dm;
+}
+
+void drawSurfaceDisplay(){
+  tft.fillScreen(ILI9340_BLACK);
+  current_time = now();
+  // Display current date
+  tft.setCursor(0, 0);
+  tft.setTextColor(ILI9340_WHITE);  tft.setTextSize(3);
+  tft.print(year(current_time));
+  tft.print("-");
+  sprintf(s1, "%02d", month(current_time));
+  tft.print(s1);
+  tft.print("-");
+  sprintf(s1, "%02d", day(current_time));
+  tft.println(s1);
+  tft.setCursor(20 ,40); tft.setTextSize(5);
+  sprintf(s1, "%02d", hour(current_time));
+  tft.print(s1);
+  tft.print(":");
+  sprintf(s1, "%02d", minute(current_time));
+  tft.print(s1);
+  tft.print(":");
+  sprintf(s1, "%02d", second(current_time));
+  tft.print(s1);
 }
 
 unsigned long testText() {
