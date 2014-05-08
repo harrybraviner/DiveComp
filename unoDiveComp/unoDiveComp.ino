@@ -38,8 +38,11 @@
 Adafruit_ILI9340 tft = Adafruit_ILI9340(_cs, _dc, _rst);
 
 // Dive variables
-float depth;
+unsigned int depth_dm;  // Depth in decameters
 float dive_time;
+
+// Display variables
+char s1[4], s2[2];
 
 void setup() {
   Serial.begin(9600);
@@ -52,7 +55,7 @@ void setup() {
   tft.setRotation(1);  // Want a landscape display
 
   // Initialise dive variables
-  depth = 99.0;
+  depth_dm = 1995;
   dive_time = 0.0;
 
   Serial.print(F("Text                     "));
@@ -61,8 +64,10 @@ void setup() {
 }
 
 void loop(void) {
+    if(depth_dm == 5) depth_dm = 4995;
+    else depth_dm = 5;
     drawDiveDisplay();
-    delay(2000);
+    delay(500);
 }
 
 
@@ -87,20 +92,43 @@ void drawDiveDisplay() {
   
   // Display depth in meters
   tft.setCursor(0, 40);
-  tft.setTextColor(ILI9340_WHITE);  tft.setTextSize(3);
-  char s1[5]; char s2[2];
-  sprintf(s1, "%d", floor(depth));
-  sprintf(s2, "%1d", (unsigned int)(max(depth, 0)), ((unsigned int)(max(depth*10, 0))%10));
-  tft.println("Depth: ");
+  tft.setTextColor(ILI9340_WHITE);  
+
+  
+  tft.setCursor(0, 40); tft.setTextSize(3); tft.println("Depth: ");
   Serial.println("-----");
   Serial.println(s1);
   Serial.println(s2);
-  tft.setCursor(50, 40); tft.setTextSize(7); tft.print(s1);
-  tft.setCursor(180, 40); tft.print(".");
-  tft.setCursor(150, 40); tft.print(s1);
-  tft.setCursor(240,68);
-  tft.setTextSize(3);
-  tft.print(" msw");
+  /*tft.setCursor(115, 40); tft.setTextSize(7); tft.print(s1);
+  tft.setCursor(185, 54); tft.setTextSize(5); tft.print(".");
+  tft.setCursor(220, 54); tft.setTextSize(5); tft.print(s2);
+  tft.setCursor(240,68); tft.setTextSize(3); tft.print(" msw");*/
+  sprintf(s2, "%1d", depth_dm%10);
+  if(1 <= depth_dm && depth_dm <= 9){
+    sprintf(s1, "0");
+    tft.setCursor(177, 40); tft.setTextSize(7); tft.print(s1);
+    tft.setCursor(205, 54); tft.setTextSize(5); tft.print(".");
+    tft.setCursor(230, 54); tft.setTextSize(5); tft.print(s2);
+    tft.setCursor(240,68); tft.setTextSize(3); tft.print(" msw");
+  } else if (10 <= depth_dm && depth_dm <= 99) {
+    sprintf(s1, "%1d", depth_dm/10);
+    tft.setCursor(179, 40); tft.setTextSize(7); tft.print(s1);
+    tft.setCursor(205, 54); tft.setTextSize(5); tft.print(".");
+    tft.setCursor(230, 54); tft.setTextSize(5); tft.print(s2);
+    tft.setCursor(240,68); tft.setTextSize(3); tft.print(" msw");
+  } else if(100 <= depth_dm && depth_dm <= 999){
+    sprintf(s1, "%2d", depth_dm/10);
+    tft.setCursor(137, 40); tft.setTextSize(7); tft.print(s1);
+    tft.setCursor(205, 54); tft.setTextSize(5); tft.print(".");
+    tft.setCursor(230, 54); tft.setTextSize(5); tft.print(s2);
+    tft.setCursor(240,68); tft.setTextSize(3); tft.print(" msw");
+  } else if (1000 <= depth_dm && depth_dm <= 10000){
+    sprintf(s1, "%3d", depth_dm/10);
+    tft.setCursor(95, 40); tft.setTextSize(7); tft.print(s1);
+    tft.setCursor(205, 54); tft.setTextSize(5); tft.print(".");
+    tft.setCursor(230, 54); tft.setTextSize(5); tft.print(s2);
+    tft.setCursor(240,68); tft.setTextSize(3); tft.print(" msw");
+  }
   
   /*
   tft.setTextColor(ILI9340_YELLOW); tft.setTextSize(2);
