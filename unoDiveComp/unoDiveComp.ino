@@ -40,11 +40,16 @@ Adafruit_ILI9340 tft = Adafruit_ILI9340(_cs, _dc, _rst);
 
 // Dive variables
 unsigned int depth_dm;  // Depth in decameters
-float dive_time;
+unsigned long dive_time_s;  // Dive time in seconds
+
 
 // Display variables
+enum prev_display_enum {DIVEMODEDISP, SURFMODEDISP, NONE} prev_display = NONE;
 char s1[4], s2[2];
-unsigned int prev_display_depth_dm;
+unsigned short prev_display_time[] = {0, 0, 0, 0, 0};
+unsigned short new_display_time[] = {0, 0, 0, 0, 0};
+unsigned short prev_display_depth[] = {0, 0, 0, 0};
+unsigned short new_display_depth[] = {0, 0, 0, 0};
 time_t current_time;
 
 void setup() {
@@ -58,8 +63,8 @@ void setup() {
   tft.setRotation(1);  // Want a landscape display
 
   // Initialise dive variables
-  depth_dm = 1995;
-  dive_time = 0.0;
+  depth_dm = 9999;
+  dive_time_s = 6051;
   
   // Initialise the time to about now-ish
   setTime(17, 57, 0, 8, 05, 2014);
@@ -73,8 +78,10 @@ void loop(void) {
     /*if(depth_dm == 5) depth_dm = 4995;
     else depth_dm = 5;
     drawDiveDisplay();*/
-    drawSurfaceDisplay();
-    delay(500);
+    drawDiveDisplay();
+    delay(1000);
+    dive_time_s++;
+    depth_dm -= 1;
 }
 
 
@@ -89,57 +96,125 @@ unsigned long testFillScreen() {
 }
 
 void drawDiveDisplay() {
-  tft.fillScreen(ILI9340_BLACK);
+  if(prev_display != DIVEMODEDISP){  // Wipe the screen if we don't know what's there
+    tft.fillScreen(ILI9340_BLACK);
+  }
   
   // Display dive time
-  tft.setCursor(0, 0);
-  tft.setTextColor(ILI9340_WHITE);  tft.setTextSize(3);
-  tft.print("Dive time: ");
-  tft.println(dive_time);
+  new_display_time[0] = (dive_time_s/(60*100))%10;
+  new_display_time[1] = (dive_time_s/(60*10))%10;
+  new_display_time[2] = (dive_time_s/60)%10;
+  new_display_time[3] = (dive_time_s/10)%6;
+  new_display_time[4] = dive_time_s%10;
+  if(prev_display == DIVEMODEDISP){
+    if(prev_display_time[0] != new_display_time[0]){
+      tft.fillRect(190, 0, 20, 28, ILI9340_BLACK);
+      if(new_display_time[0]) {
+        tft.setCursor(190, 0); tft.setTextSize(4); tft.print(new_display_time[0]);
+      }
+      prev_display_time[0] = new_display_time[0];
+    }
+    if(prev_display_time[1] != new_display_time[1]){
+      tft.fillRect(214, 0, 20, 28, ILI9340_BLACK);
+      if(new_display_time[1] || new_display_time[0]) {
+        tft.setCursor(214, 0); tft.setTextSize(4); tft.print(new_display_time[1]);
+      }
+      prev_display_time[1] = new_display_time[1];
+    }
+    if(prev_display_time[2] != new_display_time[2]){
+      tft.fillRect(238, 0, 20, 28, ILI9340_BLACK);
+      tft.setCursor(238, 0); tft.setTextSize(4); tft.print(new_display_time[2]);
+      prev_display_time[2] = new_display_time[2];
+    }
+    if(prev_display_time[3] != new_display_time[3]){
+      tft.fillRect(270, 6, 15, 22, ILI9340_BLACK);
+      tft.setCursor(270, 6); tft.setTextSize(3); tft.print(new_display_time[3]);
+      prev_display_time[3] = new_display_time[3];
+    }
+    if(prev_display_time[4] != new_display_time[4]){
+      tft.fillRect(288, 6, 15, 22, ILI9340_BLACK);
+      tft.setCursor(288, 6); tft.setTextSize(3); tft.print(new_display_time[4]);
+      prev_display_time[4] = new_display_time[4];
+    }
+  } else {
+    // Screen was cleared, no need for rectangle blanking
+    tft.setCursor(0, 0);
+    tft.setTextColor(ILI9340_WHITE);  tft.setTextSize(3);
+    tft.print("Dive time: ");
+    if(new_display_time[0]) {
+      tft.setCursor(190, 0); tft.setTextSize(4); tft.print(new_display_time[0]);
+    }
+    prev_display_time[0] = new_display_time[0];
+    if(new_display_time[1] || new_display_time[0]) {
+      tft.setCursor(214, 0); tft.setTextSize(4); tft.print(new_display_time[1]);
+    }
+    prev_display_time[1] = new_display_time[1];
+    tft.setCursor(238, 0); tft.setTextSize(4); tft.print(new_display_time[2]);
+    prev_display_time[2] = new_display_time[2];
+    tft.setCursor(253, 0); tft.setTextSize(4); tft.print(":");
+    tft.setCursor(270, 6); tft.setTextSize(3); tft.print(new_display_time[3]);
+    prev_display_time[3] = new_display_time[3];
+    tft.setCursor(288, 6); tft.setTextSize(3); tft.print(new_display_time[4]);
+    prev_display_time[4] = new_display_time[4];
+  }
   
   // Display depth in meters
-  tft.setCursor(0, 40);
-  tft.setTextColor(ILI9340_WHITE);  
-  tft.setCursor(0, 40); tft.setTextSize(3); tft.println("Depth: ");
-  Serial.println("-----");
-  Serial.println(s1);
-  Serial.println(s2);
-  /*tft.setCursor(115, 40); tft.setTextSize(7); tft.print(s1);
-  tft.setCursor(185, 54); tft.setTextSize(5); tft.print(".");
-  tft.setCursor(220, 54); tft.setTextSize(5); tft.print(s2);
-  tft.setCursor(240,68); tft.setTextSize(3); tft.print(" msw");*/
-  sprintf(s2, "%1d", depth_dm%10);
-  if(1 <= depth_dm && depth_dm <= 9){
-    sprintf(s1, "0");
-    tft.setCursor(177, 40); tft.setTextSize(7); tft.print(s1);
+  new_display_depth[0] = (depth_dm/(1000))%10;
+  new_display_depth[1] = (depth_dm/(100))%10;
+  new_display_depth[2] = (depth_dm/(10))%10;
+  new_display_depth[3] =  depth_dm%10;
+  if(prev_display == DIVEMODEDISP){
+    if(new_display_depth[0] != prev_display_depth[0]){
+      tft.fillRect(95, 40, 35, 49, ILI9340_BLACK);
+      if(new_display_depth[0]){
+        tft.setCursor(95, 40); tft.setTextSize(7); tft.print(new_display_depth[0]);
+      }
+      prev_display_depth[0] = new_display_depth[0];
+    }
+    if(new_display_depth[1] != prev_display_depth[1]){
+      tft.fillRect(137, 40, 35, 49, ILI9340_BLACK);
+      if(new_display_depth[1] || new_display_depth[0]){
+        tft.setCursor(137, 40); tft.setTextSize(7); tft.print(new_display_depth[1]);
+      }
+      prev_display_depth[1] = new_display_depth[1];
+    }
+    if(new_display_depth[2] != prev_display_depth[2]){
+      tft.fillRect(179, 40, 35, 49, ILI9340_BLACK);
+      tft.setCursor(179, 40); tft.setTextSize(7); tft.print(new_display_depth[2]);
+      prev_display_depth[2] = new_display_depth[2];
+    }
+    if(new_display_depth[3] != prev_display_depth[3]){
+      tft.fillRect(230, 54, 25, 35, ILI9340_BLACK);
+      tft.setCursor(230, 54); tft.setTextSize(5); tft.print(new_display_depth[3]);
+      prev_display_depth[3] = new_display_depth[3];
+    }
+  } else {
+    // Screen was cleared, no need for rectangle blanking
+    tft.setCursor(0, 40);
+    tft.setTextColor(ILI9340_WHITE);  
+    tft.setCursor(0, 40); tft.setTextSize(3); tft.println("Depth: ");
+    if(new_display_depth[0]){
+      tft.setCursor(95, 40); tft.setTextSize(7); tft.print(new_display_depth[0]);
+    }
+    prev_display_depth[0] = new_display_depth[0];
+    if(new_display_depth[1] || new_display_depth[0]){
+      tft.setCursor(137, 40); tft.setTextSize(7); tft.print(new_display_depth[1]);
+    }
+    prev_display_depth[1] = new_display_depth[1];
+    tft.setCursor(179, 40); tft.setTextSize(7); tft.print(new_display_depth[2]);
+    prev_display_depth[2] = new_display_depth[2];
     tft.setCursor(205, 54); tft.setTextSize(5); tft.print(".");
-    tft.setCursor(230, 54); tft.setTextSize(5); tft.print(s2);
-    tft.setCursor(240,68); tft.setTextSize(3); tft.print(" msw");
-  } else if (10 <= depth_dm && depth_dm <= 99) {
-    sprintf(s1, "%1d", depth_dm/10);
-    tft.setCursor(179, 40); tft.setTextSize(7); tft.print(s1);
-    tft.setCursor(205, 54); tft.setTextSize(5); tft.print(".");
-    tft.setCursor(230, 54); tft.setTextSize(5); tft.print(s2);
-    tft.setCursor(240,68); tft.setTextSize(3); tft.print(" msw");
-  } else if(100 <= depth_dm && depth_dm <= 999){
-    sprintf(s1, "%2d", depth_dm/10);
-    tft.setCursor(137, 40); tft.setTextSize(7); tft.print(s1);
-    tft.setCursor(205, 54); tft.setTextSize(5); tft.print(".");
-    tft.setCursor(230, 54); tft.setTextSize(5); tft.print(s2);
-    tft.setCursor(240,68); tft.setTextSize(3); tft.print(" msw");
-  } else if (1000 <= depth_dm && depth_dm <= 10000){
-    sprintf(s1, "%3d", depth_dm/10);
-    tft.setCursor(95, 40); tft.setTextSize(7); tft.print(s1);
-    tft.setCursor(205, 54); tft.setTextSize(5); tft.print(".");
-    tft.setCursor(230, 54); tft.setTextSize(5); tft.print(s2);
-    tft.setCursor(240,68); tft.setTextSize(3); tft.print(" msw");
+    tft.setCursor(230, 54); tft.setTextSize(5); tft.print(new_display_depth[3]);
+    prev_display_depth[3] = new_display_depth[3];
+    tft.setCursor(258, 68); tft.setTextSize(3); tft.print("msw");
   }
   
   // Update display variables
-  prev_display_depth_dm = depth_dm;
+  prev_display = DIVEMODEDISP;
 }
 
 void drawSurfaceDisplay(){
+  // FIXME - make this faster like the drawDiveDisplay() function!
   tft.fillScreen(ILI9340_BLACK);
   current_time = now();
   // Display current date
