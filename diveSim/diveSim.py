@@ -10,6 +10,8 @@ import argparse
 import time
 import math
 
+import curses
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -20,6 +22,7 @@ from dummyModel import dummyModel
 
 # Start of main code
 
+##### Start of argument parser #####
 parser = argparse.ArgumentParser(
     description='dive simulation program')
 parser.add_argument("--plot-profile", action="store_true")
@@ -36,8 +39,9 @@ args = parser.parse_args()
 plot_profile=args.plot_profile
 plot_update_time=args.plot_update_time
 plot_update_depth=args.plot_update_depth
+##### End of argument parser #####
 
-# Initialise interactive mode
+# Initialise interactive mode parameters
 quit = False
 current_depth = target_depth = 0
 max_depth = 0
@@ -67,8 +71,40 @@ if plot_profile:
     ax.set_ylim(plot_update_depth + 0.01, -0.01)
     profilePlot.canvas.draw()
 
-#for model in model_list:
-#    model("plot")
+##### Start of curses interface setup #####
+stdscr = curses.initscr()
+curses.noecho()
+curses.cbreak()
+stdscr.keypad(1)
+
+windowWidth = 90
+
+# Data window
+numDataLines = 4
+dataWin = curses.newwin(numDataLines, windowWidth, 0, 0)
+dataWin.addstr(0, 0, "Dive time:\t{0:02d}:{1:02d}:{2:02d}".format(int(dive_time/(60*60)), int((dive_time/60)%60), int(dive_time%60)))
+dataWin.addstr(1, 0, "Current depth:\t{0:03d}.{1:1d}m".format(int(current_depth), int(round((current_depth*10)%10))))
+dataWin.addstr(2, 0, "Target depth:\t{0:03d}.{1:1d}m".format(int(target_depth), int(round((target_depth*10)%10))))
+dataWin.addstr(3, 0, "Rate of descent / ascent:\t{0:03d}.{1:1d}m/min".format(int(descent_rate*60.), int(round((descent_rate*60.*10)%10))))
+dataWin.refresh()
+
+# Input window
+inputString = ''
+inputWin = curses.newwin(1, windowWidth, numDataLines, 0)
+inputWin.addstr(0, 0, ">> " + inputString)
+inputWin.refresh()
+inputWin.nodelay(1)
+
+# Help window
+numHelpLines = 3
+helpWin = curses.newwin(numHelpLines, windowWidth, numDataLines + 1, 0)
+helpWin.addstr(0, 0, "quit\t- Exit the program")
+helpWin.addstr(1, 0, "set depth [depth / m]\t- Set the target depth in meters")
+helpWin.addstr(2, 0, "set rate [rate / (m / min)]\t- Set the descent / ascent rate in meters per minute")
+helpWin.refresh()
+
+inputWin.move(0, 3) # Finally, place the cursor!
+##### End of curses interface setup #####
 
 while(not quit):
     # Interactive mode
@@ -105,4 +141,67 @@ while(not quit):
     for model in model_list:
         model.update()
         model.update_plot()
+    
+    ##### Start of curses interface update #####
+    # Update the displayed data
+    dataWin.erase()
+    dataWin.addstr(0, 0, "Dive time:\t{0:02d}:{1:02d}:{2:02d}".format(int(dive_time/(60*60)), int((dive_time/60)%60), int(dive_time%60)))
+    dataWin.addstr(1, 0, "Current depth:\t{0:03d}.{1:01d}m".format(int(round(current_depth*10)/10), int(round((current_depth*10))%10)))
+    dataWin.addstr(2, 0, "Target depth:\t{0:03d}.{1:1d}m".format(int(target_depth), int(round((target_depth*10)%10))))
+    dataWin.addstr(3, 0, "Rate of descent / ascent:\t{0:03d}.{1:1d}m/min".format(int(descent_rate*60.), int(round((descent_rate*60.*10)%10))))
+    dataWin.refresh()
+    inputWin.move(0, len(">> " + inputString)) # Put the cursor back in the right place
+    inputWin.refresh()
+    time.sleep(0.01)
 
+    # Get user input (if any)
+    inch = inputWin.getch()
+    if inch ==8 or inch == 127:	# Backspace or Delete?
+        inputString = inputString[:-1]
+	inputWin.deleteln()
+	inputWin.move(0, 0)
+	inputWin.addstr(0, 0, ">> " + inputString)
+	inputWin.refresh()
+    elif inch != -1: # Anything else?
+        try:
+	    inch = str(chr(inch))
+	except:
+	    pass
+	else:
+	    if inch == '\n':
+	        inputWin.deleteln()
+		inputWin.move(0, 0)
+		inputWin.addstr(0, 0, ">> ")
+		inputWin.refresh()
+		# Did the user ask to quit?
+		if inputString.strip().lower() == 'quit':
+		    quit = True
+		# Did the user ask to set the target depth?
+		elif len(inputString.strip().lower().split()) >= 3 and inputString.strip().lower().split()[0:2] == ['set', 'depth']:
+		    try:
+		        target_depth = float(inputString.strip().lower().split()[2])
+		    except:
+		        pass
+		# Did the user ask to set the descent rate?
+		elif len(inputString.strip().lower().split()) >= 3 and inputString.strip().lower().split()[0:2] == ['set', 'rate']:
+		    try:
+		        descent_rate = abs(float(inputString.strip().lower().split()[2])/60.0)
+		    except:
+		        pass
+		inputString = ''
+	    else:
+	        inputString += inch
+	        inputWin.deleteln()
+		inputWin.move(0, 0)
+		inputWin.addstr(0, 0, ">> " + inputString)
+		inputWin.refresh()
+    elif (inch == -1):
+        inputWin.move(0, len(">> " + inputString)) # Put the cursor back in the right place
+    ##### End of curses interface update #####
+
+##### Start of curses cleanup #####
+curses.nocbreak()
+stdscr.keypad(0)
+curses.echo()
+curses.endwin()
+##### End of curses cleanup #####
