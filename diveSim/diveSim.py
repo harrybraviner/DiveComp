@@ -9,6 +9,7 @@ running dive computer software.
 import argparse
 import time
 import math
+import serial
 
 import curses
 
@@ -35,10 +36,14 @@ parser.add_argument("--plot-update-depth",
 parser.add_argument("--dummy-model",
     help="a dummy, single-compartment model, with a tissue half-time of 15 seconds. DO NOT USE FOR DIVE PLANNING OR EXECUTION - THIS MODEL HAS NO BASIS IN REALITY!!!",
     action="store_true")
+parser.add_argument("--serial-comp",
+    help="serial device on which an unoDiveComp (or compatible) is attached",
+    dest="serial_device", type=str)
 args = parser.parse_args()
 plot_profile=args.plot_profile
 plot_update_time=args.plot_update_time
 plot_update_depth=args.plot_update_depth
+serial_device=args.serial_device
 ##### End of argument parser #####
 
 # Initialise interactive mode parameters
@@ -70,6 +75,16 @@ if plot_profile:
     ax.set_xlim(0, plot_update_time)
     ax.set_ylim(plot_update_depth + 0.01, -0.01)
     profilePlot.canvas.draw()
+
+# Setup the serial connection to the Arduino
+if serial_device != None:
+    try:
+        serComp = serial.Serial(serial_device, 9600)
+        time.sleep(2)
+    except:
+        print "Problem opening serial connection to device ", serial_device
+	serial_device = None
+        time.sleep(1)
 
 ##### Start of curses interface setup #####
 stdscr = curses.initscr()
@@ -119,7 +134,9 @@ while(not quit):
         # If not, update by correct amount, ignoring sign of descent_rate
         else:
             current_depth +=  abs(descent_rate)*(now_time - prev_time)*(target_depth - current_depth)/abs(target_depth - current_depth)
-    #FIXME - output depth over serial to the Arduino Uno
+    # Output depth over serial to the unoDiveComp
+    if serial_device != None:
+        serComp.write(b"D {0:d}".format(int(round(current_depth*10))))
 
     # Update time and depth variables
     prev_time = now_time
