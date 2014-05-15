@@ -79,7 +79,7 @@ void loop(void) {
     /*if(depth_dm == 5) depth_dm = 4995;
     else depth_dm = 5;
     drawDiveDisplay();*/
-    drawDiveDisplay();
+    drawSurfaceDisplay();
     delay(100);
     dive_time_s++;
 }
@@ -241,6 +241,11 @@ void serialEvent(){
       sscanf(serialString, "D %ud", &depth_dm);
   }
 #endif
+  if(i>0 && serialString[0] == 'T'){
+    int hour, minute, second, date, month, year;
+    sscanf(serialString, "T %d %d %d %d %d %d", &hour, &minute, &second, &date, &month, &year);
+    setTime(hour, minute, second, date, month, year);
+  }
   
   serialString[0] = '\0';
 }

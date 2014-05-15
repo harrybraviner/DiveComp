@@ -81,6 +81,9 @@ if serial_device != None:
     try:
         serComp = serial.Serial(serial_device, 9600)
         time.sleep(2)
+	# Tell the computer what the time is
+	ctt = time.gmtime(time.time())
+	serComp.write(b"T {0:d} {1:d} {2:d} {3:d} {4:d} {5:d}".format(ctt.tm_hour, ctt.tm_min, ctt.tm_sec, ctt.tm_mday, ctt.tm_mon, ctt.tm_year))
     except:
         print "Problem opening serial connection to device ", serial_device
 	serial_device = None
